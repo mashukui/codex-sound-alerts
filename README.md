@@ -74,4 +74,4 @@ The test suite runs the native alert script in a test mode that records events i
 
 ## License
 
-MIT
+[MIT](https://github.com/mashukui/codex-sound-alerts?tab=MIT-1-ov-file)
