@@ -1,0 +1,32 @@
+{
+  "name": "codex-sound-alerts",
+  "version": "0.1.1",
+  "description": "Sound and desktop notifications when Codex needs approval or finishes a long task.",
+  "author": {
+    "name": "mashukui",
+    "url": "https://github.com/mashukui"
+  },
+  "homepage": "https://github.com/mashukui/codex-sound-alerts",
+  "repository": "https://github.com/mashukui/codex-sound-alerts",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "notifications",
+    "sound",
+    "approvals",
+    "hooks"
+  ],
+  "interface": {
+    "displayName": "Codex Sound Alerts",
+    "shortDescription": "Hear when Codex needs your attention.",
+    "longDescription": "Plays distinct sound and desktop notifications when Codex requests permission or finishes a task that ran for at least 60 seconds. It never approves a request or changes Codex permissions.",
+    "developerName": "mashukui",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Check whether Codex Sound Alerts is installed."
+    ]
+  }
+}

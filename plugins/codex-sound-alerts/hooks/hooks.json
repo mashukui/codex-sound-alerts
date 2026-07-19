@@ -1,0 +1,44 @@
+{
+  "description": "Notify the user when Codex needs approval or finishes a long-running turn.",
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh \"${PLUGIN_ROOT}/scripts/codex-sound-alerts.sh\" approval",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}\\scripts\\codex-sound-alerts.ps1\" -Action approval",
+            "timeout": 5,
+            "statusMessage": "Playing approval alert"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh \"${PLUGIN_ROOT}/scripts/codex-sound-alerts.sh\" start",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}\\scripts\\codex-sound-alerts.ps1\" -Action start",
+            "timeout": 5,
+            "statusMessage": "Starting task timer"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/sh \"${PLUGIN_ROOT}/scripts/codex-sound-alerts.sh\" stop",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}\\scripts\\codex-sound-alerts.ps1\" -Action stop",
+            "timeout": 5,
+            "statusMessage": "Checking task duration"
+          }
+        ]
+      }
+    ]
+  }
+}
