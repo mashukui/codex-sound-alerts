@@ -74,4 +74,4 @@ python3 tests/test_plugin.py
 
 ## 开源许可
 
-MIT
+[MIT](https://github.com/mashukui/codex-sound-alerts?tab=MIT-1-ov-file)
