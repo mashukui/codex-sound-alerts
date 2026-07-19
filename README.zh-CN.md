@@ -2,7 +2,9 @@
 
 [简体中文](README.zh-CN.md) | [English](README.md)
 
-Codex Sound Alerts 是一个轻量的本地插件，让你在 Codex 执行长时间任务时无需一直盯着屏幕。它会在以下情况播放不同的提示音，并显示桌面通知：
+[![Version](https://img.shields.io/badge/version-v0.1.1-2563EB)](https://github.com/mashukui/codex-sound-alerts) [![Codex](https://img.shields.io/badge/Codex-0.144.3%2B-000000?logo=openai&logoColor=white)](https://github.com/openai/codex) ![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555555) [![License](https://img.shields.io/badge/license-MIT-7C3AED)](https://github.com/mashukui/codex-sound-alerts?tab=MIT-1-ov-file)
+
+Codex Sound Alerts 是一个轻量插件，让你在 Codex 执行长时间任务时无需一直盯着屏幕。它会在以下情况播放不同的提示音，并显示桌面通知：
 
 - Codex 正在等待你审批权限请求。
 - 根任务运行满60秒后结束。
@@ -16,25 +18,16 @@ Codex Sound Alerts 是一个轻量的本地插件，让你在 Codex 执行长时
 
 运行插件无需安装 Python、Node.js 或任何第三方依赖。
 
-## 从本地目录安装
+## 安装
 
-在终端中执行以下命令，并将路径替换为仓库所在位置：
-
-```sh
-codex plugin marketplace add /path/to/codex-sound-alerts
-codex plugin add codex-sound-alerts@codex-sound-alerts
-```
-
-安装完成后，请重新启动 Codex 会话。Codex 可能会要求你检查并信任插件内置的 Hook。检查命令后确认信任，即可启用提醒。请不要使用 `--dangerously-bypass-hook-trust`。
-
-## 从 GitHub 安装
-
-仓库发布后，先添加 GitHub marketplace 源，再安装插件：
+先添加 GitHub marketplace 源，再安装插件：
 
 ```sh
 codex plugin marketplace add mashukui/codex-sound-alerts
 codex plugin add codex-sound-alerts@codex-sound-alerts
 ```
+
+安装完成后，请重新启动 Codex 会话。Codex 可能会要求你检查并信任插件内置的 Hook。检查命令后确认信任，即可启用提醒。请不要使用 `--dangerously-bypass-hook-trust`。
 
 ## 提醒方式
 
@@ -42,6 +35,16 @@ codex plugin add codex-sound-alerts@codex-sound-alerts
 | --- | --- | --- |
 | 需要审批权限 | Ping / Exclamation | `Codex needs attention` |
 | 超过 60 秒的任务完成 | Glass / Asterisk | `Codex task finished` |
+
+### 通知效果
+
+**等待权限审批**
+
+![Codex 权限审批通知](notify_approval_required.png)
+
+**长任务已完成**
+
+![Codex 长任务完成通知](notify_task_finish.png)
 
 macOS 端使用 `2.0` 增益播放提示音，即 `afplay` 默认增益的两倍。桌面通知通过脚本编辑器（`osascript`）发送。如果没有显示通知，请在“系统设置 > 通知”中为脚本编辑器开启通知权限。
 
