@@ -6,6 +6,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ThresholdSeconds = 60
+$ExternalHookTimeoutSeconds = 3
+$SettingsPath = $env:CODEX_SOUND_ALERTS_SETTINGS
+if (-not $SettingsPath -and $env:APPDATA) {
+    $SettingsPath = Join-Path $env:APPDATA "codex-sound-alerts\settings.json"
+}
 
 try {
     $PayloadText = [Console]::In.ReadToEnd()
@@ -23,6 +28,47 @@ function Write-TestEvent {
         Add-Content -LiteralPath $env:CODEX_SOUND_ALERTS_TEST_LOG -Value $Message -Encoding UTF8
     } catch {
     }
+}
+
+function Get-Settings {
+    if (-not $SettingsPath -or -not (Test-Path -LiteralPath $SettingsPath -PathType Leaf)) {
+        return $null
+    }
+    try {
+        return [IO.File]::ReadAllText($SettingsPath) | ConvertFrom-Json
+    } catch {
+        return $null
+    }
+}
+
+$Settings = Get-Settings
+
+function Test-DeliveryEnabled {
+    param(
+        [ValidateSet("local", "external")][string]$Channel,
+        [string]$EventName
+    )
+
+    $PropertyName = "${Channel}_delivery"
+    $Mode = if ($Settings -and $Settings.PSObject.Properties.Name -contains $PropertyName) {
+        $Settings.$PropertyName
+    } else {
+        "both"
+    }
+
+    if ($Mode -eq "completion") {
+        return $EventName -eq "task_completed"
+    }
+    return $true
+}
+
+function Get-ProjectLabel {
+    if (-not $Settings -or $Settings.include_project -ne $true -or -not $Payload -or -not $Payload.cwd) {
+        return ""
+    }
+    $Project = Split-Path -Leaf ([string]$Payload.cwd)
+    $Project = ($Project -replace '[^A-Za-z0-9._-]', '-') -replace '-+', '-'
+    return $Project.Trim('-')
 }
 
 function Send-ToastNotification {
@@ -46,31 +92,108 @@ function Send-ToastNotification {
     }
 }
 
-function Send-Alert {
-    param([ValidateSet("approval", "complete")][string]$Kind)
+function Invoke-ExternalHook {
+    param(
+        [string]$EventName,
+        [string]$Title,
+        [string]$Message,
+        [string]$Project
+    )
 
-    if ($env:CODEX_SOUND_ALERTS_TEST_MODE -eq "1") {
-        Write-TestEvent "sound:$Kind"
-        if ($env:CODEX_SOUND_ALERTS_TEST_NOTIFICATION_FAILURE -ne "1") {
-            Write-TestEvent "notification:$Kind"
-        }
+    if (-not (Test-DeliveryEnabled -Channel "external" -EventName $EventName)) {
         return
     }
 
-    try {
-        if ($Kind -eq "approval") {
-            [System.Media.SystemSounds]::Exclamation.Play()
-        } else {
-            [System.Media.SystemSounds]::Asterisk.Play()
-        }
-    } catch {
+    $HookPath = $env:CODEX_SOUND_ALERTS_EXTERNAL_HOOK
+    if (-not $HookPath -and $env:APPDATA) {
+        $HookPath = Join-Path $env:APPDATA "codex-sound-alerts\external-hook.ps1"
+    }
+    if (-not $HookPath -or -not (Test-Path -LiteralPath $HookPath -PathType Leaf)) {
+        return
     }
 
-    if ($Kind -eq "approval") {
-        Send-ToastNotification -Title "Codex needs attention" -Body "Approval required."
-    } else {
-        Send-ToastNotification -Title "Codex task finished" -Body "A long-running task has ended."
+    $EventPayload = @{
+        version = 1
+        event = $EventName
+        title = $Title
+        message = $Message
+        occurred_at = [DateTimeOffset]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
     }
+    if ($Project) {
+        $EventPayload.project = $Project
+    }
+    $EventJson = $EventPayload | ConvertTo-Json -Compress
+
+    if ($env:CODEX_SOUND_ALERTS_TEST_MODE -eq "1") {
+        Write-TestEvent "external:$EventName"
+    }
+
+    $Job = $null
+    try {
+        $Job = Start-Job -ScriptBlock {
+            param($Path, $Event, $Kind)
+            $Event | & $Path $Kind *> $null
+        } -ArgumentList $HookPath, $EventJson, $EventName
+        if (-not (Wait-Job -Job $Job -Timeout $ExternalHookTimeoutSeconds)) {
+            Stop-Job -Job $Job -ErrorAction SilentlyContinue
+        }
+    } catch {
+    } finally {
+        if ($Job) {
+            Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Send-Alert {
+    param([ValidateSet("approval", "complete")][string]$Kind)
+
+    if ($Kind -eq "approval") {
+        $EventName = "approval_required"
+        $Title = "Codex needs attention"
+        $Message = "Approval required."
+    } else {
+        $EventName = "task_completed"
+        $Title = "Codex task finished"
+        $Message = "A long-running task has ended."
+    }
+
+    $Project = Get-ProjectLabel
+    if ($Project) {
+        $Title = "$Title · $Project"
+    }
+
+    $LocalEnabled = Test-DeliveryEnabled -Channel "local" -EventName $EventName
+
+    if ($env:CODEX_SOUND_ALERTS_TEST_MODE -eq "1") {
+        if ($LocalEnabled) {
+            Write-TestEvent "sound:$Kind"
+            if ($env:CODEX_SOUND_ALERTS_TEST_NOTIFICATION_FAILURE -ne "1") {
+                Write-TestEvent "notification:$Kind"
+            }
+        }
+        Invoke-ExternalHook -EventName $EventName -Title $Title -Message $Message -Project $Project
+        return
+    }
+
+    if ($LocalEnabled) {
+        try {
+            if ($Kind -eq "approval") {
+                [System.Media.SystemSounds]::Exclamation.Play()
+            } else {
+                [System.Media.SystemSounds]::Asterisk.Play()
+            }
+        } catch {
+        }
+
+        if ($Kind -eq "approval") {
+            Send-ToastNotification -Title $Title -Body $Message
+        } else {
+            Send-ToastNotification -Title $Title -Body $Message
+        }
+    }
+
+    Invoke-ExternalHook -EventName $EventName -Title $Title -Message $Message -Project $Project
 }
 
 function Get-StatePath {
